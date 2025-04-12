@@ -140,7 +140,7 @@ numberRange
  ;
 
 value
- : String | Number | Column | Bool
+ : String | Number | Column | Bool | BYTE_SIZE | TIME_DURATION
  ;
 
 ecommand
@@ -248,6 +248,9 @@ Dollar   : '$';
 Tilde    : '~';
 
 
+
+
+
 Bool
  : 'true'
  | 'false'
@@ -280,6 +283,8 @@ EscapeSequence
    |   OctalEscape
    ;
 
+
+
 fragment
 OctalEscape
    :   '\\' ('0'..'3') ('0'..'7') ('0'..'7')
@@ -299,6 +304,24 @@ Comment
  : ('//' ~[\r\n]* | '/*' .*? '*/' | '--' ~[\r\n]* ) -> skip
  ;
 
+ BYTE_SIZE
+ :Number BYTE_UNIT
+ ;
+
+ TIME_DURATION
+ :Number TIME_UNIT
+ ;
+
+ fragment
+ BYTE_UNIT
+ :[kKmMgGtTpP]?[bB] | 'KB' | 'MB' | 'GB' | 'TB' | 'PB'
+ ;
+
+ fragment
+ TIME_UNIT
+ :'ns' | 'us' | 'ms' | 's' | 'm' | 'h' | 'd'
+ ;
+
 Space
  : [ \t\r\n\u000C]+ -> skip
  ;
@@ -311,3 +334,6 @@ fragment Int
 fragment Digit
  : [0-9]
  ;
+
+
+
