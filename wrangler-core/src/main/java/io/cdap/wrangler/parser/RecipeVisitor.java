@@ -1,3 +1,4 @@
+package io.cdap.wrangler.parser;
 /*
  * Copyright © 2017-2019 Cask Data, Inc.
  *
@@ -13,15 +14,14 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-
-package io.cdap.wrangler.parser;
-
 import io.cdap.wrangler.api.LazyNumber;
 import io.cdap.wrangler.api.RecipeSymbol;
 import io.cdap.wrangler.api.SourceInfo;
 import io.cdap.wrangler.api.Triplet;
+
 import io.cdap.wrangler.api.parser.Bool;
 import io.cdap.wrangler.api.parser.BoolList;
+import io.cdap.wrangler.api.parser.ByteSize;
 import io.cdap.wrangler.api.parser.ColumnName;
 import io.cdap.wrangler.api.parser.ColumnNameList;
 import io.cdap.wrangler.api.parser.DirectiveName;
@@ -33,7 +33,9 @@ import io.cdap.wrangler.api.parser.Properties;
 import io.cdap.wrangler.api.parser.Ranges;
 import io.cdap.wrangler.api.parser.Text;
 import io.cdap.wrangler.api.parser.TextList;
+import io.cdap.wrangler.api.parser.TimeDuration;
 import io.cdap.wrangler.api.parser.Token;
+
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -43,7 +45,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 /**
  * This class <code>RecipeVisitor</code> implements the visitor pattern
  * used during traversal of the AST tree. The <code>ParserTree#Walker</code>
@@ -77,10 +78,33 @@ public final class RecipeVisitor extends DirectivesBaseVisitor<RecipeSymbol.Buil
     return builder.build();
   }
 
+
   /**
    * A Recipe is made up of Directives and Directives is made up of each individual
    * Directive. This method is invoked on every visit to a new directive in the recipe.
    */
+
+  @Override
+  public RecipeSymbol.Builder visitValue(DirectivesParser.ValueContext ctx) {
+    if (ctx.String() != null) {
+      String value = ctx.String().getText();
+      builder.addToken(new Text(value.substring(1, value.length() - 1)));
+    } else if (ctx.Number() != null) {
+      builder.addToken(new Numeric(new LazyNumber(ctx.Number().getText())));
+    } else if (ctx.Column() != null) {
+      builder.addToken(new ColumnName(ctx.Column().getText().substring(1)));
+    } else if (ctx.Bool() != null) {
+      builder.addToken(new Bool(Boolean.valueOf(ctx.Bool().getText())));
+    } else if (ctx.BYTE_SIZE() != null) {
+      builder.addToken(new ByteSize(ctx.BYTE_SIZE().getText()));
+    } else if (ctx.TIME_DURATION() != null) {
+      builder.addToken(new TimeDuration(ctx.TIME_DURATION().getText()));
+    } else {
+      throw new IllegalStateException("Unknown value type: " + ctx.getText());
+    }
+    return builder;
+  }
+
   @Override
   public RecipeSymbol.Builder visitDirective(DirectivesParser.DirectiveContext ctx) {
     builder.createTokenGroup(getOriginalSource(ctx));
@@ -183,6 +207,8 @@ public final class RecipeVisitor extends DirectivesBaseVisitor<RecipeSymbol.Buil
     builder.addToken(new DirectiveName(ctx.Identifier().getText()));
     return builder;
   }
+
+
 
   /**
    * A Directive can consist of column specifiers. These are columns that the directive

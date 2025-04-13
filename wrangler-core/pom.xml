@@ -311,7 +311,6 @@
     </dependency>
   </dependencies>
 
-
   <build>
     <resources>
       <resource>
@@ -337,6 +336,25 @@
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources/antlr4</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
         <artifactId>buildnumber-maven-plugin</artifactId>
         <version>1.0</version>
         <executions>
@@ -356,6 +374,14 @@
             <item>timestamp</item>
             <item>${user.name}</item>
           </items>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.3</version>
+        <configuration>
+          <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
         </configuration>
       </plugin>
     </plugins>
