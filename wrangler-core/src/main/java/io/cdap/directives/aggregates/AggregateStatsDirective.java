@@ -24,9 +24,9 @@ import io.cdap.wrangler.api.Row;
 import io.cdap.wrangler.api.TransientStore;
 import io.cdap.wrangler.api.TransientVariableScope;
 import io.cdap.wrangler.api.parser.ByteSize;
-import io.cdap.wrangler.api.parser.TimeDuration;
 import io.cdap.wrangler.api.parser.ColumnName;
 import io.cdap.wrangler.api.parser.Text;
+import io.cdap.wrangler.api.parser.TimeDuration;
 import io.cdap.wrangler.api.parser.TokenType;
 import io.cdap.wrangler.api.parser.UsageDefinition;
 
@@ -41,16 +41,19 @@ import java.util.List;
  * Example: aggregate-stats :data_transfer_size :response_time total_size_mb total_time_sec MB seconds
  */
 public class AggregateStatsDirective implements Directive {
+
     public static final String NAME = "aggregate-stats";
+
+    private static final String SIZE_KEY = "total_bytes";
+    private static final String TIME_KEY = "total_nanos";
+    private static final String COUNT_KEY = "row_count";
+
     private String sourceSizeColumn;
     private String sourceTimeColumn;
     private String targetSizeColumn;
     private String targetTimeColumn;
     private String sizeUnit = "MB"; // Default to MB
     private String timeUnit = "seconds"; // Default to seconds
-    private static final String SIZE_KEY = "total_bytes";
-    private static final String TIME_KEY = "total_nanos";
-    private static final String COUNT_KEY = "row_count";
 
     @Override
     public UsageDefinition define() {
@@ -81,16 +84,15 @@ public class AggregateStatsDirective implements Directive {
     @Override
     public List<Row> execute(List<Row> rows, ExecutorContext context) throws DirectiveExecutionException {
         TransientStore store = context.getTransientStore();
-        Long totalBytes = (Long) store.get( SIZE_KEY);
+        Long totalBytes = (Long) store.get(SIZE_KEY);
         Long totalNanos = (Long) store.get(TIME_KEY);
         Long rowCount = (Long) store.get(COUNT_KEY);
+
         totalBytes = totalBytes != null ? totalBytes : 0L;
         totalNanos = totalNanos != null ? totalNanos : 0L;
         rowCount = rowCount != null ? rowCount : 0L;
 
-        // Process each row
         for (Row row : rows) {
-            // Aggregate byte sizes
             Object sizeValue = row.getValue(sourceSizeColumn);
             if (sizeValue instanceof Number) {
                 totalBytes += ((Number) sizeValue).longValue();
@@ -102,7 +104,6 @@ public class AggregateStatsDirective implements Directive {
                 }
             }
 
-            // Aggregate time durations
             Object timeValue = row.getValue(sourceTimeColumn);
             if (timeValue instanceof Number) {
                 totalNanos += ((Number) timeValue).longValue();
@@ -117,12 +118,10 @@ public class AggregateStatsDirective implements Directive {
             rowCount++;
         }
 
-        // Update store
         store.set(TransientVariableScope.GLOBAL, SIZE_KEY, totalBytes);
         store.set(TransientVariableScope.GLOBAL, TIME_KEY, totalNanos);
         store.set(TransientVariableScope.GLOBAL, COUNT_KEY, rowCount);
 
-        // Return empty list during processing; final output in finalize
         return new ArrayList<>();
     }
 
@@ -136,14 +135,14 @@ public class AggregateStatsDirective implements Directive {
      */
     public List<Row> finalize(ExecutorContext context) throws DirectiveExecutionException {
         TransientStore store = context.getTransientStore();
-        Long totalBytes = (Long) store.get( SIZE_KEY);
+        Long totalBytes = (Long) store.get(SIZE_KEY);
         Long totalNanos = (Long) store.get(TIME_KEY);
         Long rowCount = (Long) store.get(COUNT_KEY);
+
         totalBytes = totalBytes != null ? totalBytes : 0L;
         totalNanos = totalNanos != null ? totalNanos : 0L;
         rowCount = rowCount != null ? rowCount : 0L;
 
-        // Convert size to target unit
         double sizeOutput;
         switch (sizeUnit) {
             case "BYTES":
@@ -162,7 +161,6 @@ public class AggregateStatsDirective implements Directive {
                 throw new DirectiveExecutionException("Unsupported size unit: " + sizeUnit);
         }
 
-        // Convert time to target unit
         double timeOutput;
         switch (timeUnit) {
             case "nanoseconds":
@@ -181,14 +179,12 @@ public class AggregateStatsDirective implements Directive {
                 throw new DirectiveExecutionException("Unsupported time unit: " + timeUnit);
         }
 
-        // Create output row
         List<Row> results = new ArrayList<>();
         Row result = new Row();
         result.add(targetSizeColumn, sizeOutput);
         result.add(targetTimeColumn, timeOutput);
         results.add(result);
 
-        // Reset store
         store.reset(TransientVariableScope.GLOBAL);
         return results;
     }
