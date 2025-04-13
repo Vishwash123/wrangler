@@ -1,0 +1,29 @@
+How do I add support for 'KB' and 'MB' in the grammar file?
+
+How do I add support for 'ms' and 's' in the grammar file?
+
+How do I regenerate the parser and lexer code using Maven?
+
+How do I create a ByteSize.java class to parse inputs like '10KB' and '1MB'?
+
+How do I create a TimeDuration.java class to parse inputs like '150ms' and '2s'?
+
+How do I write tests to check if for example '10KB' is correctly parsed into bytes?
+
+How do I write tests to check if for example '150ms' is correctly parsed into milliseconds?
+
+How do I write a basic directive to sum up byte sizes and time durations?
+
+How do I write a test to check if the AggregateStats directive correctly sums up byte sizes in MB?
+
+How do I write a test to check if the AggregateStats directive correctly sums up time durations in seconds?
+
+How do I convert total bytes to MB in my AggregateStats directive?
+
+How do I convert total time from milliseconds to seconds in the aggregation?
+
+How do I write unit tests to check if the parser correctly handles byte sizes like '10KB'?
+
+How do I write unit tests to verify that the AggregateStats directive correctly adds byte sizes and time durations?
+
+How do I test my aggregation logic using TestingRig to check byte size in MB and time in seconds?
