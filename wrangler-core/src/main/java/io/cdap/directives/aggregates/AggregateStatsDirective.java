@@ -23,6 +23,8 @@ import io.cdap.wrangler.api.ExecutorContext;
 import io.cdap.wrangler.api.Row;
 import io.cdap.wrangler.api.TransientStore;
 import io.cdap.wrangler.api.TransientVariableScope;
+import io.cdap.wrangler.api.parser.ByteSize;
+import io.cdap.wrangler.api.parser.TimeDuration;
 import io.cdap.wrangler.api.parser.ColumnName;
 import io.cdap.wrangler.api.parser.Text;
 import io.cdap.wrangler.api.parser.TokenType;
@@ -79,7 +81,7 @@ public class AggregateStatsDirective implements Directive {
     @Override
     public List<Row> execute(List<Row> rows, ExecutorContext context) throws DirectiveExecutionException {
         TransientStore store = context.getTransientStore();
-        Long totalBytes = (Long) store.get(SIZE_KEY);
+        Long totalBytes = (Long) store.get( SIZE_KEY);
         Long totalNanos = (Long) store.get(TIME_KEY);
         Long rowCount = (Long) store.get(COUNT_KEY);
         totalBytes = totalBytes != null ? totalBytes : 0L;
@@ -94,8 +96,8 @@ public class AggregateStatsDirective implements Directive {
                 totalBytes += ((Number) sizeValue).longValue();
             } else if (sizeValue instanceof String) {
                 try {
-                    totalBytes += parseByteSize((String) sizeValue);
-                } catch (NumberFormatException e) {
+                    totalBytes += new ByteSize((String) sizeValue).getBytes();
+                } catch (IllegalArgumentException e) {
                     // Skip invalid sizes
                 }
             }
@@ -106,8 +108,8 @@ public class AggregateStatsDirective implements Directive {
                 totalNanos += ((Number) timeValue).longValue();
             } else if (timeValue instanceof String) {
                 try {
-                    totalNanos += parseTimeDuration((String) timeValue);
-                } catch (NumberFormatException e) {
+                    totalNanos += new TimeDuration((String) timeValue).getNanos();
+                } catch (IllegalArgumentException e) {
                     // Skip invalid times
                 }
             }
@@ -134,7 +136,7 @@ public class AggregateStatsDirective implements Directive {
      */
     public List<Row> finalize(ExecutorContext context) throws DirectiveExecutionException {
         TransientStore store = context.getTransientStore();
-        Long totalBytes = (Long) store.get(SIZE_KEY);
+        Long totalBytes = (Long) store.get( SIZE_KEY);
         Long totalNanos = (Long) store.get(TIME_KEY);
         Long rowCount = (Long) store.get(COUNT_KEY);
         totalBytes = totalBytes != null ? totalBytes : 0L;
@@ -189,58 +191,5 @@ public class AggregateStatsDirective implements Directive {
         // Reset store
         store.reset(TransientVariableScope.GLOBAL);
         return results;
-    }
-
-    /**
-     * Parses byte size strings (e.g., "10KB", "1.5MB") to bytes.
-     */
-    private long parseByteSize(String value) {
-        String[] parts = value.split("(?i)(?<=\\d)(?=\\p{Alpha})");
-        if (parts.length != 2) {
-            throw new NumberFormatException("Invalid byte size: " + value);
-        }
-        double number = Double.parseDouble(parts[0]);
-        String unit = parts[1].toUpperCase();
-        switch (unit) {
-            case "B":
-            case "BYTES":
-                return (long) number;
-            case "KB":
-                return (long) (number * 1024);
-            case "MB":
-                return (long) (number * 1024 * 1024);
-            case "GB":
-                return (long) (number * 1024 * 1024 * 1024);
-            default:
-                throw new NumberFormatException("Unknown unit: " + unit);
-        }
-    }
-
-    /**
-     * Parses time duration strings (e.g., "5ms", "2.1s") to nanoseconds.
-     */
-    private long parseTimeDuration(String value) {
-        String[] parts = value.split("(?i)(?<=\\d)(?=\\p{Alpha})");
-        if (parts.length != 2) {
-            throw new NumberFormatException("Invalid time duration: " + value);
-        }
-        double number = Double.parseDouble(parts[0]);
-        String unit = parts[1].toLowerCase();
-        switch (unit) {
-            case "ns":
-            case "nanoseconds":
-                return (long) number;
-            case "ms":
-            case "milliseconds":
-                return (long) (number * 1_000_000);
-            case "s":
-            case "seconds":
-                return (long) (number * 1_000_000_000);
-            case "m":
-            case "minutes":
-                return (long) (number * 60 * 1_000_000_000);
-            default:
-                throw new NumberFormatException("Unknown unit: " + unit);
-        }
     }
 }
